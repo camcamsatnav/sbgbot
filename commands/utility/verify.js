@@ -1,5 +1,6 @@
 const {SlashCommandBuilder, EmbedBuilder} = require('discord.js');
-const {hypixelAPI} = require('../../config.json');
+const {hypixelAPI, verifiedRole} = require('../../config.json');
+const { FSDB } = require("file-system-db");
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -37,13 +38,25 @@ module.exports = {
             .setTimestamp()
             .setFooter({ text: 'Benjybot' });
 
-
         if (interaction.user.username !== hypixelData.player.socialMedia.links.DISCORD) {
-            // await interaction.reply({content: 'This discord acocunt is not linked to your minecraft account in hypixel', ephemeral: false});
             await interaction.reply({embeds: [failedEmbed], ephemeral: true});
             return;
         }
+
+        const db = new FSDB("./database/members.json", false); //change to true before deployment
+
+        db.set(interaction.user.username, {
+            discordID: interaction.user.id,
+            minecraftName: interaction.options.getString("minecraft-username"),
+            minecraftUUID: uuid.id
+        });
+
+        const member = interaction.guild.members.cache.find(member => member.id === interaction.user.id);
+        member.roles.add(verifiedRole);
+
         await interaction.reply({embeds: [successEmbed], ephemeral: true});
+
+
         //minecraft username to uuid ->
         //https://api.hypixel.net/v2/player?uuid=6994c547-f53e-4107-ace4-a0bb48609bb5 -> fetch this url
         //socialMedia.links.DISCORD -> check if this is the same as the discord account
