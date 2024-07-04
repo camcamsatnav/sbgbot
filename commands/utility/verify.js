@@ -48,11 +48,13 @@ module.exports = {
             return;
         }
 
-        db.set(interaction.user.username, {
+
+        db.push("players", {
+            discord: interaction.user.username,
             discordID: interaction.user.id,
             minecraftName: interaction.options.getString("minecraft-username"),
             minecraftUUID: uuid.id
-        });
+        })
 
         const member = interaction.guild.members.cache.find(member => member.id === interaction.user.id);
         member.roles.add(verifiedRole);

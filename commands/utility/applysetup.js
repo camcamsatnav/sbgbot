@@ -27,14 +27,16 @@ module.exports = {
         const collector = interaction.channel.createMessageComponentCollector();
         collector.on('collect', async event => {
             if (event.customId === 'apply') {
+                const player = db.get("players").find(player => player.discord === event.user.username);
+
                 //check if user is verified
-                if (!db.has(event.user.username)) {
+                if (!player) {
                     event.reply({content: "Please run /verify first", ephemeral: true});
                     return;
                 }
 
                 //fetch xp and check if reaches minimum requirement
-                const xp = await fetchLevel(db.get(event.user.username).minecraftUUID);
+                const xp = await fetchLevel(player.minecraftUUID);
                 if (Math.floor(xp / 100) < requirement) {
                     event.reply({content: `You must be level ${requirement} to apply`, ephemeral: true});
                     return;
@@ -51,7 +53,7 @@ module.exports = {
                 await interaction.guild.channels.create({
                     name: `${event.user.username}-apply`
                 }).then(async (c) => {
-                    await applyChannel(c, event, interaction, xp)
+                    await applyChannel(c, event, interaction, xp, player)
                 });
             }
         });
@@ -64,9 +66,10 @@ module.exports = {
  * @param event apply button event
  * @param interaction apply button interaction
  * @param xp player's skyblock xp
+ * @param player player's data
  * @returns {Promise<void>}
  */
-async function applyChannel(c, event, interaction, xp) {
+async function applyChannel(c, event, interaction, xp, player) {
     //move to specific category and give permissions
     await c.setParent(interaction.guild.channels.cache.find(channel => channel.name === "[Tickets]"));
     await c.permissionOverwrites.edit(event.user.id, {
@@ -84,7 +87,7 @@ async function applyChannel(c, event, interaction, xp) {
 
 
     await c.send("HELLO");//nice application welcome message thing
-    await c.send(`https://sky.shiiyu.moe/stats/${db.get(event.user.username).minecraftName}`);
+    await c.send(`https://sky.shiiyu.moe/stats/${player.minecraftName}`);
 
     const cancel = new ButtonBuilder()
         .setCustomId('cancelapplication')
@@ -128,7 +131,7 @@ async function applyChannel(c, event, interaction, xp) {
 
         } else if (applicationEvent.customId === 'acceptapplication') {
             await applicationEvent.reply({content: "Application accepted"});
-            await invitePlayer(db.get(event.user.username).minecraftUUID);
+            await invitePlayer(player.minecraftUUID);
             c.messages.fetch(`${applicationEvent.message.id}`).then(msg => msg.edit({components: []}));
         } else if (applicationEvent.customId === 'denyapplication') {
             applicationEvent.reply({content: "Application denied"});

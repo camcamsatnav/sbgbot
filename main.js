@@ -1,12 +1,11 @@
-const { Client, Events, Collection, GatewayIntentBits } = require('discord.js');
+const {Client, Events, Collection, GatewayIntentBits} = require('discord.js');
 const fs = require('node:fs');
 const path = require('node:path');
-const { token } = require('./config.json');
-
+const {token} = require('./config.json');
 
 
 // Create a new client instance
-const client = new Client({ intents: [GatewayIntentBits.Guilds] });
+const client = new Client({intents: [GatewayIntentBits.Guilds]});
 
 client.commands = new Collection();
 const foldersPath = path.join(__dirname, 'commands');
@@ -28,6 +27,7 @@ for (const folder of commandFolders) {
 // When the client is ready, run this code (only once)
 client.once(Events.ClientReady, readyClient => {
     console.log(`Ready! Logged in as ${readyClient.user.tag}`);
+    // let interval = setInterval(rankCheck, 1000)
 });
 
 client.on(Events.InteractionCreate, async interaction => {
@@ -45,9 +45,9 @@ client.on(Events.InteractionCreate, async interaction => {
     } catch (error) {
         console.error(error);
         if (interaction.replied || interaction.deferred) {
-            await interaction.followUp({ content: 'There was an error while executing this command!', ephemeral: true });
+            await interaction.followUp({content: 'There was an error while executing this command!', ephemeral: true});
         } else {
-            await interaction.reply({ content: 'There was an error while executing this command!', ephemeral: true });
+            await interaction.reply({content: 'There was an error while executing this command!', ephemeral: true});
         }
     }
 });
