@@ -1,0 +1,9 @@
+const {FSDB} = require("file-system-db");
+const db = new FSDB("./database/members.json", false);
+
+
+function getMembers() {
+    return db;
+}
+
+module.exports = {getMembers}
