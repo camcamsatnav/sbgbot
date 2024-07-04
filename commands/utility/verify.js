@@ -1,6 +1,6 @@
 const {SlashCommandBuilder, EmbedBuilder} = require('discord.js');
 const {hypixelAPI, verifiedRole} = require('../../config.json');
-const { FSDB } = require("file-system-db");
+const {FSDB} = require("file-system-db");
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -8,35 +8,33 @@ module.exports = {
         .setDescription('link your minecraft account to your discord account')
         .addStringOption(option => option.setName('minecraft-username').setDescription('Your minecraft username').setRequired(true)),
     async execute(interaction) {
-        let uuid = await fetch(`https://api.mojang.com/users/profiles/minecraft/${interaction.options.getString("minecraft-username")}`);
-        uuid = await uuid.json();
-
-        let hypixelData = await fetch(`https://api.hypixel.net/v2/player?uuid=${uuid.id}`, {
-            method: "GET",
-            headers: {
-                "Api-Key": hypixelAPI
-            },
-        });
-        hypixelData = await hypixelData.json();
+        const uuid = await fetchUUID(interaction.options.getString("minecraft-username"));
+        const hypixelData = await fetchHypixel(uuid.id);
 
         const failedEmbed = new EmbedBuilder()
             .setColor(0x0099FF)
             .setTitle('Unsuccessful verification')
             .addFields(
-                { name: 'Your discord username', value: interaction.user.username },
-                    { name: 'Discord username linked to minecraft account', value: hypixelData.player.socialMedia.links.DISCORD }
+                {name: 'Your discord username', value: interaction.user.username},
+                {
+                    name: 'Discord username linked to minecraft account',
+                    value: hypixelData.player.socialMedia.links.DISCORD
+                }
             )
             .setTimestamp()
-            .setFooter({ text: 'Benjybot' });
+            .setFooter({text: 'Benjybot'});
         const successEmbed = new EmbedBuilder()
             .setColor(0x0099FF)
             .setTitle('Successful verification')
             .addFields(
-                { name: 'Your discord username', value: interaction.user.username },
-                { name: 'Discord username linked to minecraft account', value: hypixelData.player.socialMedia.links.DISCORD }
+                {name: 'Your discord username', value: interaction.user.username},
+                {
+                    name: 'Discord username linked to minecraft account',
+                    value: hypixelData.player.socialMedia.links.DISCORD
+                }
             )
             .setTimestamp()
-            .setFooter({ text: 'Benjybot' });
+            .setFooter({text: 'Benjybot'});
 
         if (interaction.user.username !== hypixelData.player.socialMedia.links.DISCORD) {
             await interaction.reply({embeds: [failedEmbed], ephemeral: true});
@@ -64,3 +62,18 @@ module.exports = {
         //give verified role
     },
 };
+
+async function fetchUUID(username) {
+    const response = await fetch(`https://api.mojang.com/users/profiles/minecraft/${username}`);
+    return await response.json();
+}
+
+async function fetchHypixel(uuid) {
+    const response = await fetch(`https://api.hypixel.net/v2/player?uuid=${uuid}`, {
+        method: "GET",
+        headers: {
+            "Api-Key": hypixelAPI
+        },
+    });
+    return await response.json();
+}
