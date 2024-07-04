@@ -1,6 +1,6 @@
 const {SlashCommandBuilder, EmbedBuilder} = require('discord.js');
 const {hypixelAPI, verifiedRole} = require('../../config.json');
-const {FSDB} = require("file-system-db");
+const db = require("../../database/db.js").getMembers();
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -15,7 +15,10 @@ module.exports = {
             .setColor(0x0099FF)
             .setTitle('Unsuccessful verification')
             .addFields(
-                {name: 'Your discord username', value: interaction.user.username},
+                {
+                    name: 'Your discord username',
+                    value: interaction.user.username
+                },
                 {
                     name: 'Discord username linked to minecraft account',
                     value: hypixelData.player.socialMedia.links.DISCORD
@@ -23,11 +26,15 @@ module.exports = {
             )
             .setTimestamp()
             .setFooter({text: 'Benjybot'});
+
         const successEmbed = new EmbedBuilder()
             .setColor(0x0099FF)
             .setTitle('Successful verification')
             .addFields(
-                {name: 'Your discord username', value: interaction.user.username},
+                {
+                    name: 'Your discord username',
+                    value: interaction.user.username
+                },
                 {
                     name: 'Discord username linked to minecraft account',
                     value: hypixelData.player.socialMedia.links.DISCORD
@@ -41,8 +48,6 @@ module.exports = {
             return;
         }
 
-        const db = new FSDB("./database/members.json", false); //change to true before deployment
-
         db.set(interaction.user.username, {
             discordID: interaction.user.id,
             minecraftName: interaction.options.getString("minecraft-username"),
@@ -53,13 +58,6 @@ module.exports = {
         member.roles.add(verifiedRole);
 
         await interaction.reply({embeds: [successEmbed], ephemeral: true});
-
-
-        //minecraft username to uuid ->
-        //https://api.hypixel.net/v2/player?uuid=6994c547-f53e-4107-ace4-a0bb48609bb5 -> fetch this url
-        //socialMedia.links.DISCORD -> check if this is the same as the discord account
-        //put in database with important stuff
-        //give verified role
     },
 };
 
