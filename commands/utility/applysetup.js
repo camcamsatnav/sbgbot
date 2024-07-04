@@ -1,7 +1,9 @@
 const {SlashCommandBuilder, ButtonBuilder, ActionRowBuilder} = require('discord.js');
-const {staffRole} = require('../../config.json');
-const {FSDB} = require("file-system-db");
+const {staffRole, requirement, applicationPingRole} = require('../../config.json');
 const {fetchLevel} = require("../../utils/getLevel");
+const db = require("../../database/db").getMembers();
+const {invitePlayer} = require("../../utils/wsHandler");
+
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -25,6 +27,18 @@ module.exports = {
         const collector = interaction.channel.createMessageComponentCollector();
         collector.on('collect', async event => {
             if (event.customId === 'apply') {
+                //check if user is verified
+                if (!db.has(event.user.username)) {
+                    event.reply({content: "Please run /verify first", ephemeral: true});
+                    return;
+                }
+
+                //fetch xp and check if reaches minimum requirement
+                const xp = await fetchLevel(db.get(event.user.username).minecraftUUID);
+                if (Math.floor(xp / 100) < requirement) {
+                    event.reply({content: `You must be level ${requirement} to apply`, ephemeral: true});
+                    return;
+                }
 
                 //check if the channel already exists and if it does, return the channel
                 const c = interaction.guild.channels.cache.find(channel => channel.name === `${event.user.username}-apply`);
@@ -37,32 +51,88 @@ module.exports = {
                 await interaction.guild.channels.create({
                     name: `${event.user.username}-apply`
                 }).then(async (c) => {
-                    //move to specific category and give permissions
-                    await c.setParent(interaction.guild.channels.cache.find(channel => channel.name === "[Tickets]"));
-                    await c.permissionOverwrites.edit(event.user.id, {
-                        ViewChannel: true,
-                        SendMessages: true,
-                        ReadMessageHistory: true
-                    });
-                    await c.permissionOverwrites.edit(staffRole, {
-                        ViewChannel: true,
-                        SendMessages: true,
-                        ReadMessageHistory: true
-                    });
-                    await c.permissionOverwrites.edit(interaction.guild.roles.everyone, {ViewChannel: false});
-                    event.reply({content: `Apply channel: <#${c.id}> `, ephemeral: true});
-
-                    const db = new FSDB("./database/members.json", false);
-
-                    c.send("HELLO");//nice application welcome message thing
-                    const xp = await fetchLevel(db.get(event.user.username).minecraftUUID);
-                    c.send(`https://sky.shiiyu.moe/stats/${db.get(event.user.username).minecraftName}`);
-                    c.send(xp.toString());
-
-                    //TODO: check if xp is high enough before makign channel
-                    //TODO: check if user is in members.json -> if not make them verify
+                    await applyChannel(c, event, interaction, xp)
                 });
             }
         });
     },
 };
+
+/**
+ * Creates the application channel and sets up the buttons
+ * @param c channel
+ * @param event apply button event
+ * @param interaction apply button interaction
+ * @param xp player's skyblock xp
+ * @returns {Promise<void>}
+ */
+async function applyChannel(c, event, interaction, xp) {
+    //move to specific category and give permissions
+    await c.setParent(interaction.guild.channels.cache.find(channel => channel.name === "[Tickets]"));
+    await c.permissionOverwrites.edit(event.user.id, {
+        ViewChannel: true,
+        SendMessages: true,
+        ReadMessageHistory: true
+    });
+    await c.permissionOverwrites.edit(staffRole, {
+        ViewChannel: true,
+        SendMessages: true,
+        ReadMessageHistory: true
+    });
+    await c.permissionOverwrites.edit(interaction.guild.roles.everyone, {ViewChannel: false});
+    await event.reply({content: `Apply channel: <#${c.id}> `, ephemeral: true});
+
+
+    await c.send("HELLO");//nice application welcome message thing
+    await c.send(`https://sky.shiiyu.moe/stats/${db.get(event.user.username).minecraftName}`);
+
+    const cancel = new ButtonBuilder()
+        .setCustomId('cancelapplication')
+        .setLabel('Click to cancel')
+        .setStyle(4);
+    const submit = new ButtonBuilder()
+        .setCustomId('submitapplication')
+        .setLabel('Click to submit')
+        .setStyle(3);
+    const row = new ActionRowBuilder()
+        .addComponents(cancel, submit);
+
+    await c.send({content: `Skyblock level: ${Math.floor(xp / 100)}`, components: [row]});
+
+    const collector = c.createMessageComponentCollector();
+
+    collector.on('collect', async applicationEvent => {
+        if (applicationEvent.customId === 'cancelapplication') {
+            applicationEvent.reply({content: "Application cancelled", ephemeral: true});
+            c.delete();
+        } else if (applicationEvent.customId === 'submitapplication') {
+
+            const accept = new ButtonBuilder()
+                .setCustomId('acceptapplication')
+                .setLabel('Accept')
+                .setStyle(3);
+            const deny = new ButtonBuilder()
+                .setCustomId('denyapplication')
+                .setLabel('Deny')
+                .setStyle(4);
+            const row = new ActionRowBuilder()
+                .addComponents(deny, accept);
+
+            await applicationEvent.reply({content: "Application submitted"});
+            c.messages.fetch(`${applicationEvent.message.id}`).then(msg => msg.edit({components: []}));
+            c.send({
+                content: `Please wait for a staff member to review your application <@${applicationPingRole}>`,
+                components: [row],
+                tts: true
+            });//add back &
+
+        } else if (applicationEvent.customId === 'acceptapplication') {
+            await applicationEvent.reply({content: "Application accepted"});
+            await invitePlayer(db.get(event.user.username).minecraftUUID);
+            c.messages.fetch(`${applicationEvent.message.id}`).then(msg => msg.edit({components: []}));
+        } else if (applicationEvent.customId === 'denyapplication') {
+            applicationEvent.reply({content: "Application denied"});
+            c.messages.fetch(`${applicationEvent.message.id}`).then(msg => msg.edit({components: []}));
+        }
+    })
+}
