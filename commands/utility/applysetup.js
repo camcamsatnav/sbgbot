@@ -103,7 +103,6 @@ async function applyChannel(c, event, interaction, xp, player) {
     await c.send({content: `Skyblock level: ${Math.floor(xp / 100)}`, components: [row]});
 
     const collector = c.createMessageComponentCollector();
-
     collector.on('collect', async applicationEvent => {
         if (applicationEvent.customId === 'cancelapplication') {
             applicationEvent.reply({content: "Application cancelled", ephemeral: true});
@@ -132,6 +131,7 @@ async function applyChannel(c, event, interaction, xp, player) {
         } else if (applicationEvent.customId === 'acceptapplication') {
             await applicationEvent.reply({content: "Application accepted"});
             await invitePlayer(player.minecraftUUID);
+            //TODO: give guild member role here
             c.messages.fetch(`${applicationEvent.message.id}`).then(msg => msg.edit({components: []}));
         } else if (applicationEvent.customId === 'denyapplication') {
             applicationEvent.reply({content: "Application denied"});

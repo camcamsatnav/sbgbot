@@ -1,11 +1,12 @@
 const {Client, Events, Collection, GatewayIntentBits} = require('discord.js');
 const fs = require('node:fs');
 const path = require('node:path');
-const {token} = require('./config.json');
+const {token, guildId, guildRole} = require('./config.json');
+const { main } = require('./utils/rankcheck');
 
 
 // Create a new client instance
-const client = new Client({intents: [GatewayIntentBits.Guilds]});
+const client = new Client({intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers, GatewayIntentBits.GuildMessages]});
 
 client.commands = new Collection();
 const foldersPath = path.join(__dirname, 'commands');
@@ -28,6 +29,10 @@ for (const folder of commandFolders) {
 client.once(Events.ClientReady, readyClient => {
     console.log(`Ready! Logged in as ${readyClient.user.tag}`);
     // let interval = setInterval(rankCheck, 1000)
+    readyClient.guilds.cache.get(guildId).members.fetch().then(() => {
+        // console.log(readyClient.guilds.cache.get(guildId).roles.cache.find(role => role.id === guildRole).members)
+        main(readyClient.guilds.cache.get(guildId).roles.cache.find(role => role.id === guildRole).members)
+    });
 });
 
 client.on(Events.InteractionCreate, async interaction => {
