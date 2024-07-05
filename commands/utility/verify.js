@@ -42,18 +42,19 @@ module.exports = {
             )
             .setTimestamp()
             .setFooter({text: 'Benjybot'});
-
+        
+        //if username doesnt match given minecraft usernames linked discord, give error
         if (interaction.user.username !== hypixelData.player.socialMedia.links.DISCORD) {
             await interaction.reply({embeds: [failedEmbed], ephemeral: true});
             return;
         }
 
-
+        //add verified player to database
         db.push("players", {
             discord: interaction.user.username,
-            discordID: interaction.user.id,
             minecraftName: interaction.options.getString("minecraft-username"),
-            minecraftUUID: uuid.id
+            minecraftUUID: uuid.id,
+            guild: false
         })
 
         const member = interaction.guild.members.cache.find(member => member.id === interaction.user.id);
@@ -62,12 +63,21 @@ module.exports = {
         await interaction.reply({embeds: [successEmbed], ephemeral: true});
     },
 };
-
+/**
+ * Converts a username into a uuid
+ * @param {string} username 
+ * @returns {string} uuid
+ */
 async function fetchUUID(username) {
     const response = await fetch(`https://api.mojang.com/users/profiles/minecraft/${username}`);
     return await response.json();
 }
 
+/**
+ * Gets playerdata from hypixel api from uuid
+ * @param {string} uuid 
+ * @returns {Object} data
+ */
 async function fetchHypixel(uuid) {
     const response = await fetch(`https://api.hypixel.net/v2/player?uuid=${uuid}`, {
         method: "GET",
