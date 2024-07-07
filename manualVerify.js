@@ -1,5 +1,5 @@
-const db = require("./database/db.js").getMembers();
-const {hypixelAPI} = require("./config.json")
+const {hypixelAPI} = require("./config.json");
+const { addMember, printall } = require("./database/db.js");
 
 /**
  * 
@@ -63,13 +63,10 @@ async function main() {
     }
 
     for (let player of allUUIDS) {
-        db.push("players", {
-            discord: player.discord,
-            minecraftName: player.minecraftName,
-            minecraftUUID: player.uuid,
-            guild: true
-        })
+        await addMember(player.discord, player.minecraftName, player.uuid, true);
     }
+
+    printall();
 }
 
 main();

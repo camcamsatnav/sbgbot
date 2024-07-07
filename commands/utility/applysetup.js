@@ -1,8 +1,8 @@
 const {SlashCommandBuilder, ButtonBuilder, ActionRowBuilder} = require('discord.js');
-const {staffRole, requirement, applicationPingRole} = require('../../config.json');
+const {staffRole, requirement, applicationPingRole, guildRole} = require('../../config.json');
 const {fetchLevel} = require("../../utils/getLevel");
-const db = require("../../database/db").getMembers();
 const {invitePlayer} = require("../../utils/wsHandler");
+const {getMemberByDiscord} = require("../../database/db.js")
 
 
 module.exports = {
@@ -20,15 +20,15 @@ module.exports = {
             .addComponents(confirm);
 
         await interaction.reply({
-            content: `HELLo`,
+            content: `Please press the button below to apply for skyblock gods`,
             components: [row],
         });
 
         const collector = interaction.channel.createMessageComponentCollector();
         collector.on('collect', async event => {
             if (event.customId === 'apply') {
-                const player = db.get("players").find(player => player.discord === event.user.username);
-
+                // const player = db.get("players").find(player => player.discord === event.user.username);
+                const player = await getMemberByDiscord(event.user.username);
                 //check if user is verified
                 if (!player) {
                     event.reply({content: "Please run /verify first", ephemeral: true});
@@ -36,16 +36,16 @@ module.exports = {
                 }
 
                 //fetch xp and check if reaches minimum requirement
-                const xp = await fetchLevel(player.minecraftUUID);
+                const xp = await fetchLevel(player.minecraftuuid);
                 if (Math.floor(xp / 100) < requirement) {
                     event.reply({content: `You must be level ${requirement} to apply`, ephemeral: true});
                     return;
                 }
 
                 //check if the channel already exists and if it does, return the channel
-                const c = interaction.guild.channels.cache.find(channel => channel.name === `${event.user.username}-apply`);
+                const c = interaction.guild.channels.cache.find(channel => channel.name === `${(event.user.username).replaceAll(".","")}-apply`);
                 if (c) {
-                    event.reply({content: `Apply channel: <#${c.id}> `, ephemeral: true});
+                    await event.reply({content: `Apply channel: <#${c.id}> `, ephemeral: true});
                     return;
                 }
 
@@ -87,7 +87,7 @@ async function applyChannel(c, event, interaction, xp, player) {
 
 
     await c.send("HELLO");//nice application welcome message thing
-    await c.send(`https://sky.shiiyu.moe/stats/${player.minecraftName}`);
+    await c.send(`https://sky.shiiyu.moe/stats/${player.minecraftname}`);
 
     const cancel = new ButtonBuilder()
         .setCustomId('cancelapplication')
@@ -123,18 +123,31 @@ async function applyChannel(c, event, interaction, xp, player) {
             await applicationEvent.reply({content: "Application submitted"});
             c.messages.fetch(`${applicationEvent.message.id}`).then(msg => msg.edit({components: []}));
             c.send({
-                content: `Please wait for a staff member to review your application <@${applicationPingRole}>`,
+                content: `Please wait for a staff member to review your application <@&${applicationPingRole}>`,
                 components: [row],
                 tts: true
-            });//add back &
+            });
 
         } else if (applicationEvent.customId === 'acceptapplication') {
+            //make only staff accept
+            const clicker = interaction.guild.members.cache.find(member => member.id === applicationEvent.user.id)
+            if (!clicker.roles.cache.find(r => r.id === staffRole)) return;
+
             await applicationEvent.reply({content: "Application accepted"});
-            await invitePlayer(player.minecraftUUID);
-            //TODO: give guild member role here
+
+            //invite to guild and add guild role
+            await invitePlayer(player.minecraftuuid);
+            const member = interaction.guild.members.cache.find(member => member.id === event.user.id);
+            member.roles.add(guildRole);
+
             c.messages.fetch(`${applicationEvent.message.id}`).then(msg => msg.edit({components: []}));
         } else if (applicationEvent.customId === 'denyapplication') {
+            //make only staff deny
+            const clicker = interaction.guild.members.cache.find(member => member.id === applicationEvent.user.id)
+            if (!clicker.roles.cache.find(r => r.id === staffRole)) return;
+
             applicationEvent.reply({content: "Application denied"});
+
             c.messages.fetch(`${applicationEvent.message.id}`).then(msg => msg.edit({components: []}));
         }
     })

@@ -1,6 +1,6 @@
 const {SlashCommandBuilder, EmbedBuilder} = require('discord.js');
 const {hypixelAPI, verifiedRole} = require('../../config.json');
-const db = require("../../database/db.js").getMembers();
+const {addMember} = require("../../database/db.js");
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -49,13 +49,7 @@ module.exports = {
             return;
         }
 
-        //add verified player to database
-        db.push("players", {
-            discord: interaction.user.username,
-            minecraftName: interaction.options.getString("minecraft-username"),
-            minecraftUUID: uuid.id,
-            guild: false
-        })
+        addMember(interaction.user.username, interaction.options.getString("minecraft-username"), uuid.id, false)
 
         const member = interaction.guild.members.cache.find(member => member.id === interaction.user.id);
         member.roles.add(verifiedRole);
