@@ -13,7 +13,3 @@ async function makeTable() {
 }
 
 makeTable();
-
-
-
-// db.run(`INSERT INTO members (discord, minecraftname, minecraftuuid, guild) VALUES (?, ?, ?, ?)`, ["camcamsatnav", "camcamsatnav", "6994c547f53e4107ace4a0bb48609bb5", true]);
