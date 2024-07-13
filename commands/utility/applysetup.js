@@ -1,8 +1,9 @@
 const {SlashCommandBuilder, ButtonBuilder, ActionRowBuilder} = require('discord.js');
 const {staffRole, requirement, applicationPingRole, guildRole} = require('../../config.json');
-const {fetchLevel} = require("../../utils/getLevel");
+const {fetchLevel} = require("../../utils/hypixelApi");
 const {invitePlayer} = require("../../utils/wsHandler");
 const {getMemberByDiscord} = require("../../database/db.js")
+const {addGuildMember} = require("../../database/db");
 
 
 module.exports = {
@@ -43,7 +44,7 @@ module.exports = {
                 }
 
                 //check if the channel already exists and if it does, return the channel
-                const c = interaction.guild.channels.cache.find(channel => channel.name === `${(event.user.username).replaceAll(".","")}-apply`);
+                const c = interaction.guild.channels.cache.find(channel => channel.name === `${(event.user.username).replaceAll(".", "")}-apply`);
                 if (c) {
                     await event.reply({content: `Apply channel: <#${c.id}> `, ephemeral: true});
                     return;
@@ -86,7 +87,7 @@ async function applyChannel(c, event, interaction, xp, player) {
     await event.reply({content: `Apply channel: <#${c.id}> `, ephemeral: true});
 
 
-    await c.send("HELLO");//nice application welcome message thing
+    await c.send("hello, please confirm the below information is correct and press submit");
     await c.send(`https://sky.shiiyu.moe/stats/${player.minecraftname}`);
 
     const cancel = new ButtonBuilder()
@@ -135,11 +136,14 @@ async function applyChannel(c, event, interaction, xp, player) {
 
             await applicationEvent.reply({content: "Application accepted"});
 
-            //invite to guild and add guild role
+            //invite to guild
             await invitePlayer(player.minecraftuuid);
+            //update db
+            await addGuildMember(event.user.username)
+            //add guild role
             const member = interaction.guild.members.cache.find(member => member.id === event.user.id);
             member.roles.add(guildRole);
-
+            //remove buttons
             c.messages.fetch(`${applicationEvent.message.id}`).then(msg => msg.edit({components: []}));
         } else if (applicationEvent.customId === 'denyapplication') {
             //make only staff deny
@@ -147,7 +151,7 @@ async function applyChannel(c, event, interaction, xp, player) {
             if (!clicker.roles.cache.find(r => r.id === staffRole)) return;
 
             applicationEvent.reply({content: "Application denied"});
-
+            //remove buttons
             c.messages.fetch(`${applicationEvent.message.id}`).then(msg => msg.edit({components: []}));
         }
     })
