@@ -1,0 +1,12 @@
+{
+  "token": "discord token",
+  "clientId": "discord bot id",
+  "guildId": "discord server id",
+  "verifiedRole": "role given once verified",
+  "guildRole": "role given once application accepted",
+  "staffRole": "role to run staff commands",
+  "applicationPingRole": "role to ping when application is submitted",
+  "requirement": "skyblock level requirement",
+  "wsKey": "websocket key for bridge integration",
+  "hypixelAPI": "hypixel api key"
+}
